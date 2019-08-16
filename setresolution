@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -e
+
+function main() {
+  local width height refresh mode_name
+  validate_args "$@"
+  width="$2"
+  height="$3"
+  refresh="$4"
+  mode_name="$(get_mode_name "$width" "$height" "$refresh")"
+  if ! mode_exists "$mode_name"; then
+    create_mode "$width" "$height" "$refresh" "$mode_name"
+  fi
+}
+
+function mode_exists() {
+  local mode_name
+  mode_name="$1"
+  xrandr --query | grep "$mode_name" > /dev/null
+}
+
+function create_mode() {
+  local width height refresh mode_name mode
+  width="$1"
+  height="$2"
+  refresh="$3"
+  mode_name="$4"
+  mode="$(gtf "$width" "$height" "$refresh" | awk 'NR==3 {print}' | awk '{for (i=3; i<=NF; i++) printf $i " "}')"
+  xrandr --newmode "$mode_name" $mode
+}
+
+function validate_args() {
+  if [[ "$#" -ne 4 ]]; then
+    echo_err "Usage: $0 SCREEN_NUMBER WIDTH HEIGHT REFRESH_RATE"
+    return 1
+  fi
+  validate_number "$1"
+  validate_number "$2"
+  validate_number "$3"
+  validate_number "$4"
+}
+
+function validate_number() {
+  if [[ ! "$1" =~ ^[0-9]+$ ]]; then
+    echo_err "Invalid number: $1"
+    return 1
+  fi
+}
+
+function get_mode_name() {
+  echo "${1}x${2}x${3}"
+}
+
+function echo_err() {
+  >&2 echo "$@"
+}
+
+main "$@"
