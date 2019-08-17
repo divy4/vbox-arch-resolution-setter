@@ -9,18 +9,18 @@ function main() {
   height="$2"
   refresh="$3"
 
-  mode_name="$(get_mode_name "$width" "$height" "$refresh")"
-  if ! mode_exists "$mode_name"; then
-    create_mode "$width" "$height" "$refresh" "$mode_name"
+  if mode_exists; then
+    set_mode '1920x1440'
+    delete_mode
+    remove_mode
   fi
-  add_mode "$mode_name"
-  set_mode "$mode_name"
+  create_mode "$width" "$height" "$refresh"
+  add_mode
+  set_mode custom
 }
 
 function mode_exists() {
-  local mode_name
-  mode_name="$1"
-  xrandr --query | grep "$mode_name" > /dev/null
+  xrandr --query | grep "custom" > /dev/null
 }
 
 function create_mode() {
@@ -30,11 +30,19 @@ function create_mode() {
   refresh="$3"
   mode_name="$4"
   mode="$(gtf "$width" "$height" "$refresh" | awk 'NR==3 {print}' | awk '{for (i=3; i<=NF; i++) printf $i " "}')"
-  xrandr --newmode "$mode_name" $mode
+  xrandr --newmode custom $mode
+}
+
+function remove_mode() {
+  xrandr --rmmode custom
 }
 
 function add_mode() {
-  xrandr --addmode Virtual-1 "$1"
+  xrandr --addmode Virtual-1 custom
+}
+
+function delete_mode() {
+  xrandr --delmode Virtual-1 custom
 }
 
 function set_mode() {
@@ -56,10 +64,6 @@ function validate_number() {
     echo_err "Invalid number: $1"
     return 1
   fi
-}
-
-function get_mode_name() {
-  echo "custom"
 }
 
 function echo_err() {
