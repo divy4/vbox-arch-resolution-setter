@@ -5,13 +5,16 @@ set -e
 function main() {
   local width height refresh mode_name
   validate_args "$@"
-  width="$2"
-  height="$3"
-  refresh="$4"
+  width="$1"
+  height="$2"
+  refresh="$3"
+
   mode_name="$(get_mode_name "$width" "$height" "$refresh")"
   if ! mode_exists "$mode_name"; then
     create_mode "$width" "$height" "$refresh" "$mode_name"
   fi
+  add_mode "$mode_name"
+  set_mode "$mode_name"
 }
 
 function mode_exists() {
@@ -30,15 +33,22 @@ function create_mode() {
   xrandr --newmode "$mode_name" $mode
 }
 
+function add_mode() {
+  xrandr --addmode Virtual-1 "$1"
+}
+
+function set_mode() {
+  xrandr --output Virtual-1 --mode "$1"
+}
+
 function validate_args() {
-  if [[ "$#" -ne 4 ]]; then
-    echo_err "Usage: $0 SCREEN_NUMBER WIDTH HEIGHT REFRESH_RATE"
+  if [[ "$#" -ne 3 ]]; then
+    echo_err "Usage: $0 WIDTH HEIGHT REFRESH_RATE"
     return 1
   fi
   validate_number "$1"
   validate_number "$2"
   validate_number "$3"
-  validate_number "$4"
 }
 
 function validate_number() {
@@ -49,7 +59,7 @@ function validate_number() {
 }
 
 function get_mode_name() {
-  echo "${1}x${2}x${3}"
+  echo "custom"
 }
 
 function echo_err() {
