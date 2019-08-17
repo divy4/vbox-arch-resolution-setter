@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+set -e
+
+function main() {
+  local width height refresh prev_mode next_mode
+  validate_args "$@"
+  width="$1"
+  height="$2"
+  refresh="$3"
+  prev_mode="$(get_current_mode_name)"
+  next_mode="$(get_mode_name "$width" "$height" "$refresh")"
+
+  if [[ "$prev_mode" != "$next_mode" ]]; then
+    create_mode "$next_mode" "$width" "$height" "$refresh"
+    add_mode "$next_mode"
+    set_mode "$next_mode"
+
+    if is_custom_mode_name "$prev_mode"; then
+      delete_mode "$prev_mode"
+      remove_mode "$prev_mode"
+    fi
+  fi
+}
+
+function get_mode_name() {
+  echo "custom_${1}x${2}x${3}"
+}
+
+function is_custom_mode_name() {
+  [[ "$1" =~ ^custom_[0-9]+x[0-9]+x[0-9]+$ ]]
+}
+
+function get_current_mode_name() {
+  xrandr --query --screen 0 | grep '\s\+.[A-Za-z0-9_-]\+\s\+[0-9]\+\.[0-9]\+\*' | awk '{print $1}'
+}
+
+function create_mode() {
+  local mode_name width height refresh mode
+  mode_name="$1"
+  width="$2"
+  height="$3"
+  refresh="$4"
+  mode="$(gtf "$width" "$height" "$refresh" | awk 'NR==3 {print}' | awk '{for (i=3; i<=NF; i++) printf $i " "}')"
+  xrandr --newmode "$mode_name" $mode
+}
+
+function remove_mode() {
+  xrandr --rmmode "$1"
+}
+
+function add_mode() {
+  xrandr --addmode Virtual-1 "$1"
+}
+
+function delete_mode() {
+  xrandr --delmode Virtual-1 "$1"
+}
+
+function set_mode() {
+  xrandr --output Virtual-1 --mode "$1"
+}
+
+function validate_args() {
+  if [[ "$#" -ne 3 ]]; then
+    echo_err "Usage: $0 WIDTH HEIGHT REFRESH_RATE"
+    return 1
+  fi
+  validate_number "$1"
+  validate_number "$2"
+  validate_number "$3"
+}
+
+function validate_number() {
+  if [[ ! "$1" =~ ^[0-9]+$ ]]; then
+    echo_err "Invalid number: $1"
+    return 1
+  fi
+}
+
+function echo_err() {
+  >&2 echo "$@"
+}
+
+main "$@"
