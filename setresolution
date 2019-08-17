@@ -3,46 +3,58 @@
 set -e
 
 function main() {
-  local width height refresh mode_name
+  local width height refresh prev_mode next_mode
   validate_args "$@"
   width="$1"
   height="$2"
   refresh="$3"
+  prev_mode="$(get_current_mode_name)"
+  next_mode="$(get_mode_name "$width" "$height" "$refresh")"
 
-  if mode_exists; then
-    set_mode '1920x1440'
-    delete_mode
-    remove_mode
+  if [[ "$prev_mode" != "$next_mode" ]]; then
+    create_mode "$next_mode" "$width" "$height" "$refresh"
+    add_mode "$next_mode"
+    set_mode "$next_mode"
+
+    if is_custom_mode_name "$prev_mode"; then
+      delete_mode "$prev_mode"
+      remove_mode "$prev_mode"
+    fi
   fi
-  create_mode "$width" "$height" "$refresh"
-  add_mode
-  set_mode custom
 }
 
-function mode_exists() {
-  xrandr --query | grep "custom" > /dev/null
+function get_mode_name() {
+  echo "custom_${1}x${2}x${3}"
+}
+
+function is_custom_mode_name() {
+  [[ "$1" =~ ^custom_[0-9]+x[0-9]+x[0-9]+$ ]]
+}
+
+function get_current_mode_name() {
+  xrandr --query --screen 0 | grep '\s\+.[A-Za-z0-9_-]\+\s\+[0-9]\+\.[0-9]\+\*' | awk '{print $1}'
 }
 
 function create_mode() {
-  local width height refresh mode_name mode
-  width="$1"
-  height="$2"
-  refresh="$3"
-  mode_name="$4"
+  local mode_name width height refresh mode
+  mode_name="$1"
+  width="$2"
+  height="$3"
+  refresh="$4"
   mode="$(gtf "$width" "$height" "$refresh" | awk 'NR==3 {print}' | awk '{for (i=3; i<=NF; i++) printf $i " "}')"
-  xrandr --newmode custom $mode
+  xrandr --newmode "$mode_name" $mode
 }
 
 function remove_mode() {
-  xrandr --rmmode custom
+  xrandr --rmmode "$1"
 }
 
 function add_mode() {
-  xrandr --addmode Virtual-1 custom
+  xrandr --addmode Virtual-1 "$1"
 }
 
 function delete_mode() {
-  xrandr --delmode Virtual-1 custom
+  xrandr --delmode Virtual-1 "$1"
 }
 
 function set_mode() {
